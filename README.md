@@ -2,127 +2,165 @@
 
 Proyecto realizado para la materia de Tópicos.
 
-El programa permite establecer comunicación entre dos computadoras conectadas a la misma red utilizando Java y sockets TCP.
+El programa permite establecer comunicación entre varias computadoras conectadas a la misma red local utilizando Java, sockets TCP e hilos.
 
-Una computadora funciona como servidor y la otra como cliente. Después de establecer la conexión, ambas pueden enviar y recibir varios mensajes sin tener que volver a conectarse después de cada envío.
+Una computadora funciona como servidor y las demás se conectan como clientes. Cada cliente puede escribir un nombre para identificarse dentro del chat y enviar mensajes al grupo. El servidor recibe cada mensaje y lo distribuye a todas las computadoras que se encuentren conectadas.
 
-Para facilitar el uso del programa se agregó una interfaz gráfica desarrollada con Swing.
+La aplicación cuenta con una interfaz gráfica desarrollada con Swing para facilitar la conexión y el envío de mensajes.
 
 ## Objetivo
 
-Desarrollar una aplicación que permita la comunicación entre dos computadoras dentro de una red local utilizando sockets TCP e hilos en Java.
+Desarrollar una aplicación de mensajería que permita comunicar varias computadoras dentro de una red local mediante una arquitectura cliente-servidor.
 
-El uso de hilos permite mantener activa la recepción de mensajes sin bloquear la interfaz gráfica, por lo que el usuario puede continuar escribiendo y enviando mensajes mientras el programa espera información de la otra computadora.
+El programa utiliza hilos para atender varias conexiones al mismo tiempo y para mantener la recepción de mensajes sin bloquear la interfaz gráfica.
 
 ## Estructura del proyecto
 
-El proyecto está organizado de la siguiente manera:
+El proyecto se encuentra organizado de la siguiente manera:
 
 ```text
 CLIENTE-SERVIDOR
 │
 ├── src
 │   ├── Cliente.java
-│   └── Servidor.java
+│   ├── Servidor.java
+│   └── RedUtil.java
 │
 ├── .gitignore
 └── README.md
 ```
 
-La carpeta `src` contiene las clases principales del programa.
+La carpeta `src` contiene el código fuente de la aplicación.
 
 ## Servidor
 
-La clase `Servidor` se encarga de abrir un puerto de comunicación y esperar la conexión de un cliente.
+La clase `Servidor` se encarga de abrir el puerto de comunicación y aceptar las conexiones de las computadoras cliente.
 
-Desde la interfaz se puede indicar el puerto que se desea utilizar y posteriormente iniciar el servidor.
+Cuando un cliente se conecta, el servidor crea un hilo independiente para atenderlo. Esto permite que varios clientes permanezcan conectados al mismo tiempo sin que uno bloquee la comunicación de los demás.
 
-El programa también muestra las direcciones IP disponibles en la computadora para facilitar la conexión desde otro equipo.
-
-Cuando un cliente se conecta, el servidor mantiene la conexión abierta y puede enviar y recibir varios mensajes.
+El servidor mantiene una lista con los clientes activos. Cuando recibe un mensaje, agrega el nombre del usuario que lo envió y distribuye el mensaje a todos los clientes conectados.
 
 La interfaz del servidor contiene:
 
 - Campo para indicar el puerto.
 - Botón para iniciar o detener el servidor.
-- Estado de la conexión.
-- Dirección IP de la computadora.
-- Área de conversación.
+- Estado del servidor.
+- Direcciones IP disponibles en la computadora.
+- Área de conversación grupal.
 - Campo para escribir mensajes.
-- Botón para enviar.
+- Botón para enviar mensajes a todos los clientes.
+
+También muestra la cantidad de clientes conectados en ese momento.
+
+Ejemplo:
+
+```text
+Estado: activo - 3 clientes conectados
+```
 
 ## Cliente
 
 La clase `Cliente` se encarga de establecer la conexión con el servidor.
 
-Para conectarse se debe escribir la dirección IP de la computadora servidor y el puerto que está utilizando.
+Cada cliente debe indicar:
 
-Una vez realizada la conexión, el cliente puede enviar y recibir mensajes mientras la sesión permanezca activa.
+- Nombre con el que aparecerá en el chat.
+- Dirección IP del servidor.
+- Puerto utilizado por el servidor.
+
+Después de conectarse, el cliente mantiene un hilo escuchando los mensajes enviados por el servidor.
 
 La interfaz del cliente contiene:
 
+- Campo para escribir el nombre del usuario.
 - Campo para escribir la IP del servidor.
 - Campo para indicar el puerto.
 - Botón para conectar o desconectar.
 - Estado de la conexión.
-- Área de conversación.
+- Área de conversación grupal.
 - Campo para escribir mensajes.
 - Botón para enviar.
 
-## Funcionamiento de la comunicación
+## RedUtil
 
-La aplicación utiliza una arquitectura cliente-servidor.
+La clase `RedUtil` contiene métodos auxiliares relacionados con la red.
+
+Su función principal es consultar las interfaces de red de la computadora servidor y obtener las direcciones IPv4 disponibles.
+
+Estas direcciones se muestran en la interfaz para que los clientes sepan cuál deben utilizar al conectarse.
+
+## Funcionamiento general
+
+La comunicación utiliza una arquitectura cliente-servidor.
 
 ```text
-Computadora cliente                 Computadora servidor
-        |                                    |
-        |---------- Conexión --------------->|
-        |                                    |
-        |---------- Mensaje ---------------->|
-        |<--------- Mensaje -----------------|
-        |---------- Mensaje ---------------->|
-        |---------- Mensaje ---------------->|
-        |<--------- Mensaje -----------------|
-        |                                    |
+                         Servidor
+                       Puerto 5000
+                           |
+             +-------------+-------------+
+             |             |             |
+         Cliente 1     Cliente 2     Cliente 3
+         Fernando         Ana           José
+             |             |             |
+             +------ Conversación -------+
 ```
 
-La conexión permanece abierta mientras las dos aplicaciones continúen conectadas.
+Todos los mensajes pasan primero por el servidor.
 
-Esto permite enviar varios mensajes durante la misma sesión.
+Por ejemplo, si Fernando escribe:
+
+```text
+Hola a todos
+```
+
+El cliente envía el mensaje al servidor.
+
+El servidor lo recibe y lo distribuye al resto de las conexiones utilizando el nombre del usuario:
+
+```text
+Fernando: Hola a todos
+```
+
+Todos los clientes conectados reciben el mismo mensaje.
 
 ## Uso de sockets
 
-La comunicación entre las computadoras se realiza mediante sockets TCP.
-
-En el servidor se utiliza `ServerSocket` para abrir un puerto y esperar conexiones.
+El servidor utiliza `ServerSocket` para abrir un puerto y esperar conexiones.
 
 ```java
 ServerSocket servidor = new ServerSocket();
 ```
 
-Posteriormente se utiliza `accept()` para esperar la conexión de un cliente.
+El puerto se asigna utilizando:
+
+```java
+servidor.bind(new InetSocketAddress(puerto));
+```
+
+Para aceptar una nueva conexión se utiliza:
 
 ```java
 Socket cliente = servidor.accept();
 ```
 
-En el cliente se utiliza un objeto `Socket` para establecer la conexión utilizando la dirección IP y el puerto del servidor.
+Cada cliente utiliza un objeto `Socket` para conectarse con la dirección IP y el puerto del servidor.
 
 ```java
 Socket socket = new Socket();
 ```
 
-La conexión se realiza mediante:
+La conexión se realiza con:
 
 ```java
 socket.connect(
-    new InetSocketAddress(ip, puerto)
+    new InetSocketAddress(ip, puerto),
+    5000
 );
 ```
 
 ## Envío y recepción de mensajes
 
-Para recibir mensajes se utiliza `BufferedReader`.
+Para recibir información se utiliza `BufferedReader`.
 
 ```java
 BufferedReader entrada = new BufferedReader(
@@ -133,7 +171,7 @@ BufferedReader entrada = new BufferedReader(
 );
 ```
 
-Para enviar mensajes se utiliza `PrintWriter`.
+Para enviar información se utiliza `PrintWriter`.
 
 ```java
 PrintWriter salida = new PrintWriter(
@@ -145,67 +183,101 @@ PrintWriter salida = new PrintWriter(
 );
 ```
 
-Cada mensaje se envía utilizando:
+Los mensajes se envían con:
 
 ```java
 salida.println(mensaje);
 ```
 
-Y se recibe utilizando:
+Y se reciben utilizando:
 
 ```java
 entrada.readLine();
 ```
 
-El salto de línea enviado por `println()` permite que `readLine()` pueda identificar cuándo termina cada mensaje.
+Se utiliza UTF-8 para manejar correctamente los caracteres de los mensajes.
+
+## Identificación de los mensajes
+
+Para distinguir la información que viaja entre cliente y servidor se utilizan pequeños prefijos de texto.
+
+```text
+HELLO   Nombre del cliente
+MSG     Mensaje de la conversación
+SYS     Información del sistema
+```
+
+Cuando un cliente se conecta, primero envía su nombre.
+
+Después, los mensajes normales se envían con el identificador `MSG`.
+
+El servidor agrega el nombre del usuario antes de distribuir el mensaje a todos los clientes.
 
 ## Uso de hilos
 
-Las operaciones de red pueden permanecer esperando información durante varios segundos.
+El uso de hilos es importante porque el servidor debe atender varias computadoras al mismo tiempo.
 
-Si estas operaciones se realizaran directamente dentro del mismo hilo de la interfaz, la ventana podría dejar de responder mientras espera una conexión o un mensaje.
+El servidor mantiene un hilo encargado de aceptar conexiones y crea un hilo independiente por cada cliente conectado.
 
-Para evitar este problema se utilizan hilos.
+```text
+Servidor
+   |
+   +---- Hilo principal del servidor
+   |        |
+   |        +---- Espera nuevas conexiones
+   |
+   +---- Hilo cliente 1
+   |        |
+   |        +---- Recibe mensajes de Fernando
+   |
+   +---- Hilo cliente 2
+   |        |
+   |        +---- Recibe mensajes de Ana
+   |
+   +---- Hilo cliente 3
+            |
+            +---- Recibe mensajes de José
+```
 
-Por ejemplo:
+Un hilo se crea de la siguiente forma:
 
 ```java
-Thread hiloConexion = new Thread(() -> {
-    // Operaciones de conexión y recepción de mensajes
+Thread hiloCliente = new Thread(() -> {
+    // Comunicación con el cliente
 });
 ```
 
-Después el hilo comienza su ejecución con:
+Y comienza su ejecución utilizando:
 
 ```java
-hiloConexion.start();
+hiloCliente.start();
 ```
 
-De esta forma se separan principalmente dos tareas:
+Gracias a esto, un cliente puede estar enviando información mientras los demás continúan utilizando el chat.
 
-```text
-Aplicación
-   |
-   +---- Interfaz gráfica
-   |        |
-   |        +---- Botones
-   |        +---- Campos de texto
-   |        +---- Envío de mensajes
-   |
-   +---- Hilo de comunicación
-            |
-            +---- Espera conexiones
-            +---- Recibe mensajes
-            +---- Mantiene activa la comunicación
+El cliente también utiliza un hilo para permanecer escuchando los mensajes que llegan desde el servidor sin bloquear la ventana.
+
+## Lista de clientes conectados
+
+El servidor necesita conservar las conexiones activas para poder distribuir los mensajes.
+
+Para esto se utiliza:
+
+```java
+CopyOnWriteArrayList
 ```
 
-Esto permite que la interfaz continúe funcionando mientras el programa recibe información desde la red.
+Esta lista permite trabajar de forma segura cuando diferentes hilos agregan, eliminan o recorren los clientes conectados.
 
-## Actualización de la interfaz
+Cuando un cliente se desconecta, su conexión se elimina de la lista y los demás usuarios pueden continuar utilizando el programa.
 
-Swing utiliza un hilo encargado de administrar los componentes gráficos.
+## Interfaz gráfica y Swing
 
-Cuando se recibe un mensaje desde otro hilo, la actualización de la interfaz se realiza utilizando:
+La interfaz fue desarrollada utilizando Java Swing.
+
+Las operaciones de red se realizan en hilos diferentes al hilo que controla la interfaz.
+
+Cuando un hilo de red necesita modificar un elemento visual se utiliza:
 
 ```java
 SwingUtilities.invokeLater(() -> {
@@ -213,27 +285,27 @@ SwingUtilities.invokeLater(() -> {
 });
 ```
 
-Esto permite modificar de forma segura elementos como el área de conversación o las etiquetas de estado.
+Esto permite actualizar elementos como el área de conversación y el estado de la conexión sin bloquear la ventana.
 
 ## Tecnologías utilizadas
 
-- Java
-- Java Swing
-- Sockets TCP
-- ServerSocket
-- Socket
-- Thread
-- BufferedReader
-- PrintWriter
-- Scanner
-- Git
+- Java.
+- Java Swing.
+- Sockets TCP.
+- `ServerSocket`.
+- `Socket`.
+- `Thread`.
+- `BufferedReader`.
+- `PrintWriter`.
+- `CopyOnWriteArrayList`.
+- Git.
 
 ## Requisitos
 
 Para ejecutar el proyecto se necesita:
 
 - Java JDK 17 o superior.
-- Dos computadoras conectadas a la misma red.
+- Las computadoras deben encontrarse conectadas a la misma red local.
 
 La instalación de Java se puede comprobar con:
 
@@ -241,7 +313,7 @@ La instalación de Java se puede comprobar con:
 java -version
 ```
 
-También se puede comprobar el compilador:
+También se puede revisar el compilador:
 
 ```powershell
 javac -version
@@ -249,40 +321,25 @@ javac -version
 
 ## Compilación
 
-Desde la carpeta principal del proyecto se puede crear una carpeta donde se guardarán los archivos compilados:
+Desde la carpeta principal del proyecto se crea la carpeta donde se guardarán los archivos compilados:
 
 ```powershell
 mkdir out
 ```
 
-Posteriormente se compilan las clases:
+Después se compilan las tres clases:
 
 ```powershell
-javac -encoding UTF-8 -d out src\Servidor.java src\Cliente.java
+javac -encoding UTF-8 -d out src\Servidor.java src\Cliente.java src\RedUtil.java
 ```
 
-Los archivos compilados se almacenarán dentro de la carpeta `out`.
-
-```text
-CLIENTE-SERVIDOR
-│
-├── out
-│   ├── Cliente.class
-│   └── Servidor.class
-│
-├── src
-│   ├── Cliente.java
-│   └── Servidor.java
-│
-├── .gitignore
-└── README.md
-```
+Si la compilación se realiza correctamente se generarán los archivos `.class` dentro de `out`.
 
 La carpeta `out` no se almacena en Git porque contiene archivos generados durante la compilación.
 
 ## Ejecución del servidor
 
-Primero se debe iniciar el servidor.
+Primero se debe ejecutar el servidor:
 
 ```powershell
 java -cp out Servidor
@@ -296,62 +353,36 @@ El puerto predeterminado es:
 5000
 ```
 
-Después se debe presionar:
+Después se presiona:
 
 ```text
 Iniciar servidor
 ```
 
-El programa mostrará el estado:
-
-```text
-Estado: esperando cliente
-```
-
-También mostrará las direcciones IP disponibles en la computadora.
-
-## Dirección IP del servidor
-
-La dirección IP también se puede consultar desde Windows utilizando:
-
-```powershell
-ipconfig
-```
-
-Se debe buscar la dirección IPv4 correspondiente al adaptador de red que se está utilizando.
+El servidor mostrará sus direcciones IP y quedará esperando clientes.
 
 Ejemplo:
 
 ```text
-Dirección IPv4: 172.17.57.87
+IP de esta computadora: 172.17.57.87
 ```
 
-Esa dirección se debe utilizar en la computadora cliente.
+## Ejecución de los clientes
 
-Si aparecen varias direcciones, se debe seleccionar la que corresponda a la red donde se encuentran conectadas las dos computadoras.
-
-## Ejecución del cliente
-
-En la segunda computadora se ejecuta:
+En cada computadora cliente se ejecuta:
 
 ```powershell
 java -cp out Cliente
 ```
 
-Se abrirá la interfaz gráfica del cliente.
+Cada usuario debe escribir un nombre diferente.
 
-En el campo de dirección IP se escribe la IP del servidor.
-
-Por ejemplo:
+Ejemplo:
 
 ```text
-172.17.57.87
-```
-
-En el puerto se escribe:
-
-```text
-5000
+Nombre: Fernando
+IP servidor: 172.17.57.87
+Puerto: 5000
 ```
 
 Después se presiona:
@@ -360,69 +391,81 @@ Después se presiona:
 Conectar
 ```
 
-Si la conexión se realiza correctamente aparecerá:
+El mismo procedimiento se puede realizar en las demás computadoras.
+
+Ejemplo:
 
 ```text
-Estado: conectado
+Computadora 1
+Nombre: Fernando
+
+Computadora 2
+Nombre: Ana
+
+Computadora 3
+Nombre: José
 ```
 
-## Ejemplo de funcionamiento
+Todas deben utilizar la misma IP del servidor y el mismo puerto.
 
-Después de establecer la conexión se puede mantener una conversación.
+## Ejemplo de conversación
+
+Con varios clientes conectados se puede mantener una conversación como la siguiente:
 
 ```text
-Cliente: Hola
-Servidor: Hola
-
-Cliente: ¿Cómo estás?
-Servidor: Bien
-
-Cliente: Estoy probando el programa
-Servidor: Recibido
-
-Cliente: Mensaje adicional
-Servidor: También llegó correctamente
+Fernando: Hola a todos
+Ana: Hola Fernando
+José: Ya estoy conectado
+Fernando: Perfecto
+Servidor: Mensaje recibido por todos
+Ana: Sí, ya apareció
 ```
 
-Los mensajes continúan enviándose utilizando la misma conexión.
+Los clientes pueden seguir enviando mensajes mientras permanezcan conectados.
 
-## Prueba en una sola computadora
+## Prueba utilizando una sola computadora
 
-El programa también puede probarse utilizando una sola computadora.
+También se puede comprobar el funcionamiento abriendo varias ventanas en el mismo equipo.
 
-Primero se ejecuta:
+Primero se ejecuta el servidor:
 
 ```powershell
 java -cp out Servidor
 ```
 
-Después se abre otra terminal y se ejecuta:
+Después se pueden abrir varias terminales y ejecutar en cada una:
 
 ```powershell
 java -cp out Cliente
 ```
 
-En la dirección IP del cliente se utiliza:
+En este caso se utiliza como dirección IP:
 
 ```text
 127.0.0.1
 ```
 
-Esta dirección representa la misma computadora.
+Por ejemplo se pueden abrir tres clientes con nombres diferentes:
 
-El puerto debe ser el mismo que se encuentra configurado en el servidor.
+```text
+Fernando
+Ana
+José
+```
+
+Los tres podrán comunicarse mediante el mismo servidor.
 
 ## Posibles problemas de conexión
 
-Si el cliente no logra conectarse, se recomienda revisar los siguientes puntos:
+Si un cliente no logra conectarse, se recomienda revisar:
 
-- El servidor debe estar iniciado.
-- Las dos computadoras deben encontrarse en la misma red.
-- La dirección IP debe ser correcta.
-- El puerto del cliente debe coincidir con el puerto del servidor.
-- El Firewall de Windows debe permitir las conexiones de Java.
+- Que el servidor se encuentre iniciado.
+- Que todas las computadoras estén en la misma red.
+- Que la dirección IP corresponda al servidor.
+- Que todos utilicen el mismo puerto.
+- Que el Firewall de Windows permita la comunicación de Java.
 
-Para comprobar si existe comunicación entre las computadoras se puede utilizar:
+Para comprobar la comunicación con el servidor se puede utilizar:
 
 ```powershell
 ping DIRECCION_IP
@@ -440,7 +483,7 @@ También se puede comprobar el puerto:
 Test-NetConnection 172.17.57.87 -Port 5000
 ```
 
-Si la conexión está disponible deberá aparecer:
+Si el puerto se encuentra disponible debe aparecer:
 
 ```text
 TcpTestSucceeded : True
@@ -448,10 +491,10 @@ TcpTestSucceeded : True
 
 ## Conclusión
 
-Con este programa se implementó una comunicación entre dos computadoras utilizando sockets TCP en Java.
+Con este programa se implementó una comunicación grupal entre varias computadoras utilizando sockets TCP en Java.
 
-La conexión permanece activa para permitir el intercambio de varios mensajes entre el cliente y el servidor.
+El servidor puede mantener varias conexiones activas al mismo tiempo y distribuir los mensajes recibidos entre todos los clientes conectados.
 
-También se utilizaron hilos para realizar las operaciones de red sin bloquear la interfaz gráfica, permitiendo que el usuario pueda continuar utilizando la aplicación mientras se reciben mensajes.
+El uso de hilos permite atender cada conexión de manera independiente y mantener la interfaz gráfica funcionando mientras se reciben mensajes de la red.
 
-La interfaz desarrollada con Swing permite observar de manera más clara el estado de la conexión y la conversación entre ambas computadoras.
+La práctica permite observar de forma directa cómo un servidor puede coordinar la comunicación entre varios clientes dentro de una red local.
