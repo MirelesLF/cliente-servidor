@@ -1,0 +1,18 @@
+# Archivos compilados de Java
+*.class
+
+# Carpeta de archivos compilados
+out/
+
+# Archivos de Visual Studio Code
+.vscode/
+
+# Archivos de IntelliJ IDEA
+.idea/
+*.iml
+
+# Archivos temporales de Windows
+Thumbs.db
+
+# Archivos temporales de macOS
+.DS_Store
